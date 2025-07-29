@@ -1,0 +1,72 @@
+'use client';
+
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+type Book = {
+  id: number;
+  title: string;
+  author: string;
+  isBorrowed: boolean;
+  borrowedAt?: string;
+  reservedBy?: string;
+};
+
+type BookStore = {
+  books: Book[];
+  history: string[];
+  borrowBook: (id: number) => void;
+  returnBook: (id: number) => void;
+  reserveBook: (id: number, name: string) => void;
+};
+
+export const useBookStore = create<BookStore>()(
+  persist(
+    (set) => ({
+      books: [
+        { id: 1, title: '1984', author: 'George Orwell', isBorrowed: false },
+        { id: 2, title: 'The Hobbit', author: 'J.R.R. Tolkien', isBorrowed: false },
+        { id: 3, title: 'Dune', author: 'Frank Herbert', isBorrowed: false },
+      ],
+      history: [],
+      borrowBook: (id) =>
+        set((state) => {
+          const now = new Date().toISOString();
+          const updatedBooks = state.books.map((book) =>
+            book.id === id
+              ? { ...book, isBorrowed: true, borrowedAt: now, reservedBy: undefined }
+              : book
+          );
+          const book = state.books.find((b) => b.id === id);
+          return {
+            books: updatedBooks,
+            history: [`Borrowed "${book?.title}" on ${now}`, ...state.history],
+          };
+        }),
+      returnBook: (id) =>
+        set((state) => {
+          const now = new Date().toISOString();
+          const updatedBooks = state.books.map((book) =>
+            book.id === id ? { ...book, isBorrowed: false, borrowedAt: undefined } : book
+          );
+          const book = state.books.find((b) => b.id === id);
+          return {
+            books: updatedBooks,
+            history: [`Returned "${book?.title}" on ${now}`, ...state.history],
+          };
+        }),
+      reserveBook: (id, name) =>
+        set((state) => {
+          const updatedBooks = state.books.map((book) =>
+            book.id === id ? { ...book, reservedBy: name } : book
+          );
+          const book = state.books.find((b) => b.id === id);
+          return {
+            books: updatedBooks,
+            history: [`Reserved "${book?.title}" by ${name}`, ...state.history],
+          };
+        }),
+    }),
+    { name: 'book-storage' }
+  )
+);
